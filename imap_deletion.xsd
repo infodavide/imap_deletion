@@ -6,21 +6,13 @@
         <xs:enumeration value="INFO" />
     </xs:restriction>
   </xs:simpleType>
-  <xs:simpleType name="templateTypeType">
-    <xs:restriction base="xs:string">
-        <xs:enumeration value="HTML" />
-        <xs:enumeration value="TEXT" />
-    </xs:restriction>
-  </xs:simpleType>
   <xs:element name="configuration">
     <xs:complexType>
       <xs:sequence>
         <xs:element name="log"><!-- Not used in this version -->
           <xs:complexType>
-            <xs:sequence>
-              <xs:attribute name="path" type="xs:string" />
-              <xs:attribute name="level" type="tns:logLevelType" />
-            </xs:sequence>
+            <xs:attribute name="path" type="xs:string" />
+            <xs:attribute name="level" type="tns:logLevelType" />
           </xs:complexType>
         </xs:element>
         <xs:element name="accounts">
