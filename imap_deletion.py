@@ -163,7 +163,11 @@ if CONFIG_PATH.startswith("'") and CONFIG_PATH.endswith("'"):
 if not os.path.exists(CONFIG_PATH):
     CONFIG_PATH = str(pathlib.Path(__file__).parent) + os.sep + CONFIG_PATH
 LOG_PATH: str = os.path.splitext(CONFIG_PATH)[0] + '.log'
-logger = create_rotating_log(LOG_PATH, LOG_LEVEL)
+settings: Settings = Settings()
+settings.log_path = LOG_PATH
+settings.log_level = LOG_LEVEL
+settings.parse(os.path.abspath(CONFIG_PATH))
+logger = create_rotating_log(settings.log_path, settings.log_level)
 logger.log(logging.INFO, 'Using arguments: %s' % repr(args))
 
 if not args.f or not os.path.isfile(args.f):
@@ -171,12 +175,7 @@ if not args.f or not os.path.isfile(args.f):
     exit(1)
 
 LOCK_PATH: str = os.path.abspath(os.path.dirname(CONFIG_PATH)) + os.sep + '.imap_deletion.lck'
-settings: Settings = Settings()
-settings.log_path = LOG_PATH
-settings.log_level = LOG_LEVEL
-settings.parse(os.path.abspath(CONFIG_PATH))
-logger.setLevel(settings.log_level)
-logger.log(logging.INFO, 'Log levels et to: %s' % logging.getLevelName(logger.level))
+logger.log(logging.INFO, 'Log level set to: %s' % logging.getLevelName(logger.level))
 atexit.register(signal_handler)
 signal.signal(signal.SIGINT, signal_handler)
 logger.log(logging.INFO, 'Connecting to server: %s:%s with user: %s' % (settings.imap_server, str(settings.imap_port), settings.imap_user))
