@@ -88,7 +88,7 @@ class Settings(object):
                 self.imap_trash = '"[Gmail]/Trash"'
             self.imap_use_ssl = imap_node.get('ssl') == 'True' or imap_node.get('ssl') == 'true'
         else:
-            raise IOError('No imap element specified in the XML configuration, refer to the autoreplier.xsd')
+            raise IOError('No imap element specified in the XML configuration, refer to the XML schema')
         account_id: str = imap_node.get('account-id')
         account = accounts[account_id]
         if account:
