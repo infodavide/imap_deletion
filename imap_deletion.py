@@ -197,6 +197,7 @@ mailbox.select(settings.imap_folder)
 typ, data = mailbox.search(None, 'ALL')
 
 for num in data[0].split():
+    mailbox.store(num, '+X-GM-LABELS', '\\Trash')
     mailbox.store(num, '+FLAGS', '\\Deleted')
 
 mailbox.select(settings.imap_trash)  # select all trash
