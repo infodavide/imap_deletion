@@ -1,19 +1,18 @@
 #!/usr/bin/python
-# -*- coding: utf-*-
-
+# -*- coding: utf-8-
+"""
+Ensure deletion of messages present into the given folders
+"""
 import argparse
 import atexit
-import os
 import signal
-import time
-import email
 import imaplib
 import logging
 import os
 import pathlib
+import sys
 import xml.etree.ElementTree as etree
 from logging.handlers import RotatingFileHandler
-from imaplib import IMAP4, IMAP4_SSL
 
 __author__ = 'David Rolland, contact@infodavid.org'
 __copyright__ = 'Copyright © 2023 David Rolland'
@@ -22,16 +21,24 @@ __license__ = 'MIT'
 IMAP4_PORT: int = 143
 
 
-class ObjectView(object):
+class _ObjectView:
+    """
+    Wrapper of the object
+    """
+
     def __init__(self, d):
+        """
+        Initialize
+        :param d: the data
+        """
         self.__dict__ = d
 
-    """ Returns the string representation of the view """
     def __str__(self) -> str:
+        """ Returns the string representation of the view """
         return str(self.__dict__)
 
 
-class Settings(object):
+class Settings:
     """
     Settings used by the IMAP deletion.
     """
@@ -50,7 +57,7 @@ class Settings(object):
         """
         Parse the XML configuration.
         """
-        with open(path) as f:
+        with open(path, encoding='utf-8') as f:
             tree = etree.parse(f)
         root_node: etree.Element = tree.getroot()
         log_node: etree.Element = root_node.find('log')
@@ -99,7 +106,7 @@ class Settings(object):
 
 def create_rotating_log(path: str, level: str) -> logging.Logger:
     """
-    Create the logger with file rotation.
+    Create the logger with file rotation
     :param path: the path of the main log file
     :param level: the log level as defined in logging module
     :return: the logger
@@ -109,7 +116,8 @@ def create_rotating_log(path: str, level: str) -> logging.Logger:
     if not os.path.exists(path_obj.parent.absolute()):
         os.makedirs(path_obj.parent.absolute())
     if os.path.exists(path):
-        open(path, 'w').close()
+        with open(path, 'w', encoding='utf-8') as f:
+            f.close()
     else:
         path_obj.touch()
     # noinspection Spellchecker
@@ -129,21 +137,28 @@ def create_rotating_log(path: str, level: str) -> logging.Logger:
 
 
 def cleanup() -> None:
-    global logger
+    """
+    Cleanup the instances and session
+    """
     logger.log(logging.INFO, "Cleaning...")
     if 'mailbox' in globals():
-        global mailbox
         if 'logger' in globals():
-            logger.log(logging.INFO, 'IMAP session state: %s' % mailbox.state)
-        if 'SELECTED' == mailbox.state:
+            logger.info('IMAP session state: %s', mailbox.state)
+        if mailbox.state == 'SELECTED':
             mailbox.expunge()
             mailbox.close()
             mailbox.logout()
 
 
+# pylint: disable=missing-type-doc
 def signal_handler(sig=None, frame=None) -> None:
+    """
+    Trigger the cleanup when program is exited
+    :param sig: the signal
+    :param frame: the frame
+    """
     cleanup()
-
+# pylint: enable=missing-type-doc
 
 parser = argparse.ArgumentParser(prog='imap_deletion.py', description='Delete sent messages from IMAP server')
 parser.add_argument('-f', required=True, help='Configuration file')
@@ -168,17 +183,17 @@ settings.log_path = LOG_PATH
 settings.log_level = LOG_LEVEL
 settings.parse(os.path.abspath(CONFIG_PATH))
 logger = create_rotating_log(settings.log_path, settings.log_level)
-logger.log(logging.INFO, 'Using arguments: %s' % repr(args))
+logger.info('Using arguments: %s', repr(args))
 
 if not args.f or not os.path.isfile(args.f):
     print('Input file is required and must be valid.')
-    exit(1)
+    sys.exit(1)
 
 LOCK_PATH: str = os.path.abspath(os.path.dirname(CONFIG_PATH)) + os.sep + '.imap_deletion.lck'
-logger.log(logging.INFO, 'Log level set to: %s' % logging.getLevelName(logger.level))
+logger.info('Log level set to: %s', logging.getLevelName(logger.level))
 atexit.register(signal_handler)
 signal.signal(signal.SIGINT, signal_handler)
-logger.log(logging.INFO, 'Connecting to server: %s:%s with user: %s' % (settings.imap_server, str(settings.imap_port), settings.imap_user))
+logger.info('Connecting to server: %s:%s with user: %s', settings.imap_server, str(settings.imap_port), settings.imap_user)
 
 if settings.imap_use_ssl:
     mailbox = imaplib.IMAP4_SSL(host=settings.imap_server, port=settings.imap_port)
@@ -187,12 +202,12 @@ else:
 
 mailbox.login(settings.imap_user, settings.imap_password)
 if logger.isEnabledFor(logging.DEBUG):
-    buffer : str = 'Available folders:\n'
+    buffer: str = 'Available folders:\n'
     for i in mailbox.list()[1]:
         p = i.decode().split(' "/" ')
         buffer += (p[0] + " = " + p[1]) + '\n'
     logger.log(logging.DEBUG, buffer)
-logger.log(logging.INFO, 'Selecting folder: %s' % settings.imap_folder)
+logger.info('Selecting folder: %s', settings.imap_folder)
 mailbox.select(settings.imap_folder)
 typ, data = mailbox.search(None, 'ALL')
 
@@ -201,5 +216,5 @@ for num in data[0].split():
     mailbox.store(num, '+FLAGS', '\\Deleted')
 
 mailbox.select(settings.imap_trash)  # select all trash
-mailbox.store("1:*", '+FLAGS', '\\Deleted')  #Flag all Trash as Deleted
-exit(0)
+mailbox.store("1:*", '+FLAGS', '\\Deleted')  # Flag all Trash as Deleted
+sys.exit(0)
